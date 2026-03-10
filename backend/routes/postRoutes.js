@@ -33,10 +33,10 @@ router.post('/', async (req, res) => {
             author: req.body.author,
         })
         const savedPost = await post.save()
-        req.status(201).json(savedPost)
+        res.status(201).json(savedPost)
     }
     catch (error){
-        req.status(400).json({ message: error.message})
+        res.status(400).json({ message: error.message})
     }
 })
 
