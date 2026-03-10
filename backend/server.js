@@ -13,6 +13,10 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+// Routes
+const postRoutes = require('./routes/postRoutes')
+app.use('/api/posts'. postRoutes)
+
 //test route
 app.get('/', (req, res) => {
     res.send('Blog API is running!')
