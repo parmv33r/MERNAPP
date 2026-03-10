@@ -15,7 +15,7 @@ app.use(express.json())
 
 // Routes
 const postRoutes = require('./routes/postRoutes')
-app.use('/api/posts'. postRoutes)
+app.use('/api/posts', postRoutes)
 
 //test route
 app.get('/', (req, res) => {
