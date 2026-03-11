@@ -366,4 +366,4 @@ git log                     # View commit history
 
 ---
 
-*Built with ❤️ as part of MERN stack learning journey - Interview prep for Application Developer role at APEGA*
+*Built with ❤️ as part of MERN stack learning journey*
