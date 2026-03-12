@@ -16,6 +16,7 @@ Built as a learning project to prepare for an Application Developer interview.
 | ODM | Mongoose | Interact with MongoDB using schemas |
 | HTTP Client | Axios | Frontend to backend communication |
 | Routing | React Router DOM | Navigate between pages |
+| Authentication | JWT + bcryptjs | Secure user authentication |
 
 ---
 
@@ -24,10 +25,14 @@ Built as a learning project to prepare for an Application Developer interview.
 ```
 MERNApp/
 ├── backend/
+│   ├── middleware/
+│   │   └── auth.js             # JWT authentication middleware
 │   ├── models/
-│   │   └── Post.js             # Mongoose schema/model
+│   │   ├── Post.js             # Mongoose post schema/model
+│   │   └── User.js             # Mongoose user schema/model
 │   ├── routes/
-│   │   └── postRoutes.js       # CRUD API routes
+│   │   ├── authRoutes.js       # Register and login routes
+│   │   └── postRoutes.js       # CRUD API routes (protected)
 │   ├── .env                    # Environment variables (not on GitHub)
 │   ├── .gitignore              # Ignores node_modules and .env
 │   ├── server.js               # Entry point - Express server
@@ -37,10 +42,12 @@ MERNApp/
         ├── components/
         │   └── Navbar.js       # Navigation bar shown on every page
         ├── pages/
-        │   ├── Home.js         # Displays all blog posts as cards
+        │   ├── Home.js         # Displays all blog posts with search
         │   ├── CreatePost.js   # Form to create a new blog post
         │   ├── PostDetail.js   # Full post view with edit/delete
-        │   └── EditPost.js     # Pre-filled form to update a post
+        │   ├── EditPost.js     # Pre-filled form to update a post
+        │   ├── Login.js        # Login page (coming soon)
+        │   └── Register.js     # Register page (coming soon)
         ├── App.js              # Root component - handles routing
         └── index.js            # Entry point - renders App into DOM
 ```
@@ -74,12 +81,25 @@ MERNApp/
 - [x] Built Edit Post page — pre-filled form to update posts
 - [x] Connected frontend to backend with Axios
 - [x] Full CRUD working end to end
+- [x] Added real time search by title and author
 
-### Phase 4 — Enhancements (Coming Soon 🔜)
-- [ ] Add authentication (login/signup with JWT)
-- [ ] Add search functionality
-- [ ] Add pagination
-- [ ] Deploy app online (Render + Netlify)
+### Phase 4 — Authentication (In Progress 🔄)
+- [x] Installed bcryptjs and jsonwebtoken
+- [x] Created User model with username, email, password
+- [x] Built Register route with password encryption
+- [x] Built Login route with JWT token generation
+- [x] Created auth middleware to protect routes
+- [x] Protected CREATE, UPDATE, DELETE post routes
+- [x] Tested auth routes with Thunder Client
+- [ ] Build Register page on frontend
+- [ ] Build Login page on frontend
+- [ ] Store JWT token in localStorage
+- [ ] Send token with protected requests
+- [ ] Show/hide buttons based on login status
+
+### Phase 5 — Deployment (Coming Soon 🔜)
+- [ ] Deploy backend to Render
+- [ ] Deploy frontend to Netlify
 - [ ] JavaScript interview prep
 
 ---
@@ -109,6 +129,7 @@ npm install
 ```
 MONGO_URI=your_mongodb_connection_string
 PORT=8000
+JWT_SECRET=your_jwt_secret_key
 ```
 
 4. Run the backend server:
@@ -134,21 +155,33 @@ npm start
 
 ## 📡 API Endpoints
 
+### Auth Routes (Public)
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/posts` | Get all blog posts |
-| GET | `/api/posts/:id` | Get a single blog post |
-| POST | `/api/posts` | Create a new blog post |
-| PUT | `/api/posts/:id` | Update a blog post |
-| DELETE | `/api/posts/:id` | Delete a blog post |
+| POST | `/api/auth/register` | Register a new user |
+| POST | `/api/auth/login` | Login and get JWT token |
 
-### Example Request Body (POST/PUT)
+### Post Routes
+| Method | Endpoint | Auth Required | Description |
+|---|---|---|---|
+| GET | `/api/posts` | No | Get all blog posts |
+| GET | `/api/posts/:id` | No | Get a single blog post |
+| POST | `/api/posts` | Yes 🔒 | Create a new blog post |
+| PUT | `/api/posts/:id` | Yes 🔒 | Update a blog post |
+| DELETE | `/api/posts/:id` | Yes 🔒 | Delete a blog post |
+
+### Example Auth Request Body
 ```json
 {
-  "title": "My First Blog Post",
-  "content": "This is the content of my blog post",
-  "author": "Parmveer"
+  "username": "Parmveer",
+  "email": "parmveer@email.com",
+  "password": "password123"
 }
+```
+
+### Sending JWT Token with Protected Requests
+```
+Header: Authorization: Bearer your_jwt_token_here
 ```
 
 ---
@@ -157,7 +190,7 @@ npm start
 
 ### What is Node.js?
 Node.js is a JavaScript runtime that allows us to run JavaScript on the server side,
-outside of the browser. It's what makes it possible to use JavaScript for both
+outside of the browser. It makes it possible to use JavaScript for both
 frontend and backend development.
 
 ### What is Express?
@@ -174,51 +207,33 @@ Think of it like ordering pizza:
 - req = your order
 - res = the pizza delivered back
 
-### What is Mongoose?
-Mongoose is an ODM (Object Data Modeling) library for MongoDB. It lets us:
-- Define schemas (structure/shape of our data)
-- Validate data before saving
-- Interact with MongoDB using simple JavaScript methods
-
-### What is a Schema?
-A schema defines the structure of documents in a MongoDB collection.
-Like a blueprint for what a blog post looks like:
-```javascript
-{
-  title: String,       // required
-  content: String,     // required
-  author: String,      // required
-  createdAt: Date,     // auto generated
-  updatedAt: Date      // auto generated
-}
-```
-
-### What is async/await?
-async/await is a way to handle asynchronous operations (like database calls)
-in a clean, readable way. Instead of chaining .then() calls, we can write
-code that looks synchronous but runs asynchronously.
+### What is Middleware?
+Middleware is a function that runs between the request and the route handler.
+Think of it like airport security:
+- You can't board the plane without going through security first
+- If security passes you → next() is called and you proceed to the route
+- If security fails → it sends back an error and stops there
 
 ```javascript
-// Without async/await (Promise chaining)
-Post.find().then(posts => res.json(posts)).catch(err => res.status(500).json(err))
-
-// With async/await (cleaner!)
-const posts = await Post.find()
-res.json(posts)
+// Middleware runs before the route handler
+router.post('/', authMiddleware, async (req, res) => {
+//           ↑ runs first    ↑ runs if middleware passes
 ```
 
-### What is try/catch?
-try/catch is used to handle errors gracefully. If something inside the
-try block fails, the catch block runs instead of crashing the app.
+### What is JWT?
+JWT (JSON Web Token) is a token based authentication method:
+1. User logs in with email and password
+2. Server verifies credentials
+3. Server generates a signed token containing user info
+4. Client stores the token and sends it with every protected request
+5. Server verifies the token signature without hitting the database
 
-```javascript
-try {
-  const posts = await Post.find()  // try this
-  res.status(200).json(posts)
-} catch (error) {
-  res.status(500).json({ message: error.message })  // if it fails, do this
-}
-```
+### What is bcrypt?
+bcrypt is a password hashing library:
+- Never store plain text passwords in the database
+- bcrypt converts passwords into a hash (one way encryption)
+- When logging in, bcrypt compares the plain text with the stored hash
+- genSalt(10) — generates random data added to password before hashing. 10 is the complexity level
 
 ### What is useState?
 useState is a React hook that lets us store and manage data inside a component.
@@ -228,10 +243,6 @@ const [posts, setPosts] = useState([])
 // setPosts = function to update the data
 // [] = initial value (empty array)
 ```
-Think of it like a whiteboard:
-- posts = what's written on it
-- setPosts = the marker used to update it
-- React automatically refreshes the screen when it changes
 
 ### What is useEffect?
 useEffect is a React hook that runs code at specific times.
@@ -240,8 +251,6 @@ useEffect(() => {
   fetchPosts()  // run this when component loads
 }, [])          // [] means run only once
 ```
-Think of it like an instruction:
-"As soon as this page opens — go fetch the blog posts"
 
 ### What is useParams?
 useParams is a React Router hook that grabs variables from the URL.
@@ -252,7 +261,7 @@ const { id } = useParams()
 ```
 
 ### What is useNavigate?
-useNavigate is a React Router hook that lets us redirect the user to another page.
+useNavigate is a React Router hook that redirects the user to another page.
 ```javascript
 const navigate = useNavigate()
 navigate('/')            // go to home page
@@ -268,6 +277,14 @@ setFormData({
 })
 ```
 
+### What is localStorage?
+localStorage lets us store data in the browser that persists after page refresh.
+```javascript
+localStorage.setItem('token', token)      // save token
+localStorage.getItem('token')             // get token
+localStorage.removeItem('token')          // remove token on logout
+```
+
 ### What is CORS?
 CORS (Cross-Origin Resource Sharing) allows our React frontend (running on
 port 3000) to make requests to our Express backend (running on port 8000).
@@ -281,18 +298,27 @@ It uses HTTP methods to perform CRUD operations:
 - PUT → Update
 - DELETE → Delete
 
-### What is dotenv?
-dotenv loads environment variables from a .env file into process.env.
-This keeps sensitive data like database passwords out of your code and off GitHub.
-
 ### HTTP Status Codes
 | Code | Meaning |
 |---|---|
 | 200 | OK - request succeeded |
 | 201 | Created - new resource created |
 | 400 | Bad Request - invalid data sent |
+| 401 | Unauthorized - not logged in |
 | 404 | Not Found - resource doesn't exist |
 | 500 | Server Error - something went wrong on the server |
+
+### JavaScript Array Methods
+```javascript
+// filter() - returns items that pass a condition
+posts.filter(post => post.author === 'Parmveer')
+
+// map() - transforms every item in an array
+posts.map(post => <Card>{post.title}</Card>)
+
+// find() - returns first item that matches
+posts.find(post => post._id === id)
+```
 
 ### How the Full Stack Connects
 ```
@@ -300,7 +326,9 @@ MongoDB (database)
     ↓
 Express API (backend on port 8000)
     ↓
-Axios (makes HTTP requests)
+JWT Middleware (checks token on protected routes)
+    ↓
+Axios (makes HTTP requests with token)
     ↓
 React (frontend on port 3000)
     ↓
@@ -335,12 +363,14 @@ git log                     # View commit history
 
 ## 🗺️ Page Routes
 
-| Route | Component | Description |
-|---|---|---|
-| `/` | Home.js | Displays all posts as cards |
-| `/create` | CreatePost.js | Form to create a new post |
-| `/posts/:id` | PostDetail.js | Full post with edit/delete |
-| `/edit/:id` | EditPost.js | Pre-filled form to update post |
+| Route | Component | Auth Required | Description |
+|---|---|---|---|
+| `/` | Home.js | No | Displays all posts with search |
+| `/create` | CreatePost.js | Yes | Form to create a new post |
+| `/posts/:id` | PostDetail.js | No | Full post with edit/delete |
+| `/edit/:id` | EditPost.js | Yes | Pre-filled form to update post |
+| `/login` | Login.js | No | Login page |
+| `/register` | Register.js | No | Register page |
 
 ---
 
@@ -348,19 +378,23 @@ git log                     # View commit history
 
 - "I built a full stack MERN application from scratch"
 - "I designed and built a REST API with Express and Node.js"
+- "I implemented JWT authentication with bcrypt password hashing"
+- "I used middleware to protect routes that require authentication"
 - "I used React hooks like useState and useEffect to manage state and side effects"
 - "I implemented React Router for client side navigation"
 - "I used Material UI to build a responsive professional UI"
 - "I followed Git best practices with meaningful commits at every milestone"
 - "I stored sensitive data securely using environment variables"
 - "I used async/await for handling asynchronous database operations"
-- "I separated components from pages to keep the code organized and reusable"
+- "I implemented real time search filtering using JavaScript array methods"
 
 ---
 
 ## 🔜 Next Steps
-- Add authentication with JWT
-- Add search and pagination
+- Build Register and Login pages on frontend
+- Store JWT token in localStorage
+- Send token with protected requests
+- Show/hide buttons based on login status
 - Deploy to Render (backend) and Netlify (frontend)
 - JavaScript interview prep (closures, promises, array methods)
 
